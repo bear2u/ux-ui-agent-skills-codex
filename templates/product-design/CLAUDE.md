@@ -53,8 +53,11 @@ It runs the theme checks against `design-tokens.json` and the render checks
 against every harness in `src/components/`. The full command list lives in
 `.claude/commands/gate.md`.
 
-The render gates need headless Chrome: run `npm i -D playwright` once in this
-project. Without it they print `SKIPPED` and exit 0, which reads like a pass.
+The render gates need Playwright and Chrome/Chromium: run `npm i -D playwright`
+and `npx playwright install chromium` once in this project. Codex Cloud needs no
+administrator access for this user-cache installation. Set
+`DS_BROWSER_EXECUTABLE_PATH` to use an existing compatible user browser. Set
+`DS_REQUIRE_BROWSER=1` so missing prerequisites fail instead of printing `SKIPPED`.
 
 Gates prove objective correctness: token consistency, contrast in light and dark,
 keyboard operability, target size, reduced motion, responsive behaviour, no

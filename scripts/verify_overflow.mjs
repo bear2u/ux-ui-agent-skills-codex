@@ -24,6 +24,7 @@
  * Usage: node scripts/verify_overflow.mjs <file.html | dir> [--widths=320,414,1280]
  * Exit 1 on any signal.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { requireTargets } from './_targets.mjs';
@@ -143,7 +144,7 @@ const AUDIT = () => {
   return { clipped, overlaps };
 };
 
-const browser = await chromium.launch({ channel: 'chrome' });
+const browser = await launchBrowser(chromium);
 const problems = [];
 
 for (const w of widths) {

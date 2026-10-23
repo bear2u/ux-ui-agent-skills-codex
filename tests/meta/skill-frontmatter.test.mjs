@@ -40,7 +40,7 @@ const ALLOWED_VALUES = {
 /** The eleven that take an action or set a direction: the user's call, not the model's. */
 const USER_STARTED = [
   'brandkit', 'governance', 'image-to-code', 'migrate-design-system', 'prototype',
-  'redesign', 'gate', 'critique', 'grill-me', 'ship', 'scaffold-project',
+  'redesign', 'gate', 'critique', 'grill-me', 'ship', 'scaffold-project', 'observe',
 ];
 
 function skills() {

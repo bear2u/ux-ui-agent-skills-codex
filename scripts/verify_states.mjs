@@ -8,6 +8,7 @@
  * Usage: node scripts/verify_states.mjs <file.html> [--dark]
  * Exit 1 if any state of any element drops below WCAG AA.
  */
+import { launchBrowser } from './_browser.mjs';
 import { resolve } from 'node:path';
 import { requireTargets } from './_targets.mjs';
 let chromium;
@@ -31,7 +32,7 @@ function L([r, g, b]) { return .2126 * lin(r) + .7152 * lin(g) + .0722 * lin(b);
 function ratio(a, b) { const l1 = L(a), l2 = L(b), hi = Math.max(l1, l2), lo = Math.min(l1, l2); return (hi + .05) / (lo + .05); }
 const parse = s => { const m = s && s.match(/[\d.]+/g); return m ? m.slice(0, 3).map(Number) : null; };
 
-const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch());
+const browser = await launchBrowser(chromium);
 const page = await browser.newPage({ viewport: { width: 1000, height: 800 } });
 await page.goto('file://' + resolve(file), { waitUntil: 'networkidle' }).catch(() => {});
 await page.addStyleTag({ content: '*{transition:none!important;animation:none!important}' });
@@ -51,7 +52,10 @@ const read = el => {
   // graphical / icon-only control: no DIRECT text node (only an <svg> or nothing) →
   // WCAG 1.4.11 non-text contrast applies (3:1), not the 4.5 text rule.
   const graphical = ![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-  return { skip, graphical, color: cs.color, bg: own, label: (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().slice(0, 18), px: parseFloat(cs.fontSize), bold: (parseInt(cs.fontWeight, 10) || 400) >= 700 };
+  // Native range controls paint their thumb with accent-color, not the inherited
+  // text color. Preserve the non-text 3:1 assertion against the control surface.
+  const rangeAccent = el.tagName === 'INPUT' && el.type === 'range' && cs.accentColor !== 'auto';
+  return { skip, graphical, color: rangeAccent ? cs.accentColor : cs.color, bg: own, label: (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().slice(0, 18), px: parseFloat(cs.fontSize), bold: (parseInt(cs.fontWeight, 10) || 400) >= 700 };
 };
 
 const handles = await page.$$('button, a[href], input, select, textarea, [role="button"], [role="switch"]');

@@ -24,9 +24,12 @@ npm run test:unit    # no browser: unit + CLI + registry consistency
 npm run test:gates   # everything, including the render meta-gates
 ```
 
-`test:gates` needs Playwright and real Chrome (six gates launch
-`channel: 'chrome'`). `helpers/preflight.mjs` fails loudly if either is missing,
-because a suite that skips is a suite that proves nothing.
+`test:gates` needs Playwright and a usable Chrome/Chromium browser. Run
+`npm ci && npx playwright install chromium`; the browser installs in a user cache
+without administrator access. Every gate and the preflight share browser selection:
+`DS_BROWSER_EXECUTABLE_PATH` when set, otherwise system Chrome then Playwright
+Chromium. The preflight fails loudly when no selected browser can launch.
+See [Codex Cloud setup](../docs/CODEX-CLOUD.md) for writable caches and project reuse.
 
 ## What a meta-test asserts
 

@@ -2,6 +2,9 @@
 
 # Using the kit without Claude Code
 
+For Codex Cloud, use [the cloud setup and cross-project guide](CODEX-CLOUD.md).
+Browser gates support a user-installed browser or Playwright Chromium without administrator access.
+
 Codex, Cursor, Copilot, Jules, Aider, VS Code and about twenty more coding agents
 read `AGENTS.md` — an open convention, not any one vendor's format. The kit ships
 one, carrying the same doctrine as `CLAUDE.md`.
@@ -27,7 +30,7 @@ only the Claude Code one.
 | Tokens, components, accessibility, taste, 138 design systems | yes | **yes** |
 | All 52 gates | yes | **yes** — plain Node and Python |
 | The doctrine: eight states, token by intent, mobile-first, the house rules | yes | **yes** |
-| 25 skills that load on demand | yes | no — the doctrine is inlined instead |
+| 26 skills that load on demand | yes | no — the doctrine is inlined instead |
 | Hooks that fire whether or not the model remembers | yes | **no** |
 | `/critique` in a separate context | yes | no — a step in the instructions |
 
@@ -72,10 +75,10 @@ node scripts/lint_intent.mjs          src/components
 node scripts/slop_tells.mjs --strict  src/pages/index.html
 ```
 
-The render gates drive real Chrome:
+The render gates use Chrome or Playwright Chromium, including in Codex Cloud:
 
 ```bash
-npm i -D playwright && npx playwright install chrome
+npm i -D playwright && npx playwright install chromium
 ```
 
 Without it they print `SKIPPED` and exit 0, which reads like a pass and is not

@@ -81,7 +81,7 @@ class UxUiAgentSkills < Formula
         ux-ui-skills init --agent both
 
       The render gates need a browser once per machine:
-        npx playwright install chrome
+        npx playwright install chromium
     EOS
   end
 

@@ -37,7 +37,7 @@ then load the rule file for the territory you are actually in.
 8. **SKIPPED is not a pass.** With no browser installed a render gate prints
    `SKIPPED` and exits 0, reporting nothing. Run single render gates behind
    `DS_REQUIRE_BROWSER=1` so that becomes `REQUIRED, FAILING`, and fix it with
-   `npx playwright install chrome` rather than by removing the flag.
+   `npx playwright install chromium` rather than by removing the flag.
 
 ## Mobile is the base
 

@@ -17,6 +17,7 @@
  * Usage: node scripts/taste_audit.mjs <file.html> [--dark] [--strict]
  *   --strict → exit 1 on any HIGH finding (use as a gate). Default: report, exit 0.
  */
+import { launchBrowser } from './_browser.mjs';
 import { resolve } from 'node:path';
 import { requireTargets } from './_targets.mjs';
 let chromium;
@@ -36,7 +37,7 @@ const dark = argv.includes('--dark');
 const files = requireTargets(argv.filter(a => !a.startsWith('--')));
 if (!files.length) { console.log('usage: node scripts/taste_audit.mjs <file.html> [--dark] [--strict]'); process.exit(0); }
 
-const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch());
+const browser = await launchBrowser(chromium);
 let high = 0;
 
 for (const f of files) {

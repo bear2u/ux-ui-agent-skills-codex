@@ -35,6 +35,7 @@
  * Usage: node scripts/verify_interactive.mjs <file.html | dir> [--dark] [--advisory]
  * Exit 1 on any [A] signal.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { requireTargets } from './_targets.mjs';
@@ -139,7 +140,7 @@ const FINGERPRINT = (sel) => {
   return parts.join('~');
 };
 
-const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch());
+const browser = await launchBrowser(chromium);
 const dead = [], inert = [], invisible = [];
 let checked = 0;
 

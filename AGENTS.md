@@ -53,7 +53,7 @@ output, not from assertion.
    pass. It is a run that measured nothing. `accuracy_report.mjs` sets
    `DS_REQUIRE_BROWSER=1` so a missing browser fails loudly; set it yourself when
    you run a single render gate and intend to trust its exit code. The fix is
-   `npm install && npx playwright install chrome`, never dropping the flag.
+   `npm install && npx playwright install chromium`, never dropping the flag.
 4. **Build against the rules, then gate.** Fix and re-run until green. Do not
    announce success between failures.
 5. **Render and look.** The gates pass while a screen is still visibly broken: a

@@ -21,6 +21,7 @@
  * no image sits there unreferenced. Re-run without --check after any visual
  * change, and look at the result.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 
@@ -126,11 +127,11 @@ async function shoot() {
   let chromium;
   try { ({ chromium } = await import('playwright')); }
   catch {
-    console.error('playwright is not installed. npm i -D playwright && npx playwright install chrome');
+    console.error('playwright is not installed. npm i -D playwright && npx playwright install chromium');
     process.exit(1);
   }
   mkdirSync(OUT, { recursive: true });
-  const browser = await chromium.launch({ channel: 'chrome' });
+  const browser = await launchBrowser(chromium);
   for (const [src, name, theme, [width, height], fullPage] of SHOTS) {
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1.5 });
     await page.emulateMedia({ reducedMotion: 'reduce' });

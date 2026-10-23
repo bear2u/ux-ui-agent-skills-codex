@@ -26,6 +26,7 @@
  * --advisory reports findings but exits 0 — use it for the 44px AAA/recommended
  * sweep (SC 2.5.5), which is a goal rather than a merge blocker.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { requireTargets } from './_targets.mjs';
@@ -135,7 +136,7 @@ const AUDIT = (MIN) => {
   return { total: measured.length, bad };
 };
 
-const browser = await chromium.launch({ channel: 'chrome' });
+const browser = await launchBrowser(chromium);
 const fails = [];
 let totalTargets = 0;
 

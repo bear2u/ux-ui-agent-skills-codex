@@ -1,3 +1,5 @@
+> **Codex Cloud:** See [setup and cross-project reuse](CODEX-CLOUD.md) for browser gates without administrator access, shared toolkit checkouts, and optional Codex CLI skills/hooks.
+
 # Guide
 
 The reference half of the documentation: how the skills compose, what the

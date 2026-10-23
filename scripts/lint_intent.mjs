@@ -28,6 +28,7 @@
  * Usage: node scripts/lint_intent.mjs <file.html | dir> [--dark] [--tolerance=40]
  * Exit 1 on any signal.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { requireTargets } from './_targets.mjs';
@@ -146,7 +147,7 @@ const dist = (a, b) => {
   return Math.hypot(x - p, y - q, z - r);
 };
 
-const browser = await chromium.launch({ channel: 'chrome' });
+const browser = await launchBrowser(chromium);
 const problems = [];
 const byLabel = new Map();
 let checked = 0;

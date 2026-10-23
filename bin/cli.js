@@ -262,6 +262,7 @@ ${C.bold}Usage${C.reset}
   npx ux-ui-skills ${C.cyan}add${C.reset} <area>...      Install specific areas
   npx ux-ui-skills ${C.cyan}demo${C.reset} [dest]        Copy the rendered examples and open them (default: ./ux-ui-demo)
   npx ux-ui-skills ${C.cyan}list${C.reset}               List available areas
+  npx ux-ui-skills ${C.cyan}observe${C.reset}            Did the agent follow the rules? (--last, --html, --help)
   npx ux-ui-skills ${C.cyan}version${C.reset}            Print the installed version
   npx ux-ui-skills ${C.cyan}help${C.reset}
 
@@ -300,6 +301,16 @@ function summary(destRoot, agent) {
 function main() {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
+
+  /* observe has its own flags (--days, --session, --html), so it is handed the
+     raw arguments before the installer's parser can reject them. */
+  if (cmd === 'observe') {
+    const r = require('child_process').spawnSync(process.execPath,
+      [path.join(ROOT, 'scripts/observe.mjs'), ...argv.slice(1)], { stdio: 'inherit' });
+    process.exitCode = r.status === null ? 1 : r.status;
+    return;
+  }
+
   const { flags, rest } = parseFlags(argv.slice(1));
 
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') return help();

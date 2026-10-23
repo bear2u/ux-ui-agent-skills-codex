@@ -33,6 +33,7 @@
  * dark-mode bright-area reading is reported as a warning only, because it is a
  * heuristic and the repo does not ship heuristics as gates.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -252,7 +253,7 @@ const MEASURE = ({ T }) => {
 
 const problems = [];
 const warnings = [];
-const browser = await chromium.launch({ channel: 'chrome' });
+const browser = await launchBrowser(chromium);
 
 for (const f of files) {
   const abs = resolve(f);

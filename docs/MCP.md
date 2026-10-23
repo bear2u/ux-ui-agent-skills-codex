@@ -1,3 +1,5 @@
+> Codex Cloud: [setup without administrator access and cross-project reuse](CODEX-CLOUD.md). All browser gates support user-installed Chrome/Chromium and Playwright’s user cache.
+
 # The MCP server
 
 ```bash
@@ -87,7 +89,7 @@ protocol is implemented directly: MCP is JSON-RPC 2.0 over stdio, and the four
 methods a tools-only server needs are about forty lines. Written against the
 `2025-06-18` specification.
 
-The render gates still need a browser — `npx playwright install chrome`, once
+The render gates still need a browser — `npx playwright install chromium`, once
 per machine. `list_gates` says which gates those are, and `review_ui`'s
 `skip_browser` runs only the file-reading ones and states in its output that the
 result covers less.

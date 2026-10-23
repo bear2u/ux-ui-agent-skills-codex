@@ -39,7 +39,7 @@ and reading it as one is the last way left to satisfy rule 1 with a number nothi
 measured. `accuracy_report.mjs` already sets `DS_REQUIRE_BROWSER=1`, which turns a
 missing browser into `REQUIRED, FAILING`; set it yourself when you run a single
 render gate and intend to trust its exit code. The fix when it fails that way is
-`npm install && npx playwright install chrome`, never dropping the flag.
+`npm install && npx playwright install chromium`, never dropping the flag.
 
 > If you're about to type a quality number, stop: did a gate just produce it? If not, run the gate.
 > If you're about to say a component "looks right", stop: did you screenshot it and click it? If not, render it.

@@ -41,6 +41,18 @@ after(() => { if (scratch) rmSync(scratch, { recursive: true, force: true }); })
 /** An isolated receipts/ledger location, so tests never read the real session. */
 const isolated = () => ({ CLAUDE_PLUGIN_DATA: scratch, CLAUDE_SESSION_ID: 'test', CLAUDE_PROJECT_DIR: ROOT });
 
+/** Edit a page in a throwaway project and return what the Stop hook needs. */
+function editedPage(html) {
+  const project = mkdtempSync(join(tmpdir(), 'ds-proj-'));
+  const page = join(project, 'page.html');
+  writeFileSync(page, html);
+  const env = { CLAUDE_PLUGIN_DATA: scratch, CLAUDE_PROJECT_DIR: project, CLAUDE_SESSION_ID: '' };
+  const edit = hook('posttooluse-fast-gates.mjs',
+    { session_id: 's1', tool_name: 'Edit', tool_input: { file_path: page } }, env);
+  assert.notEqual(edit.status, null, 'setup: the PostToolUse hook must run');
+  return { project, page, env };
+}
+
 // ---------------------------------------------------------------- SessionStart
 
 test('SessionStart says whether the render gates can run at all', () => {
@@ -130,16 +142,13 @@ test('Stop does nothing when the session edited nothing', () => {
 });
 
 test('Stop BLOCKS when a UI file was edited and never measured', () => {
-  const env = isolated();
-  const target = join(ROOT, 'examples/sample-app/preview.html');
-  const edit = hook('posttooluse-fast-gates.mjs',
-    { tool_name: 'Edit', tool_input: { file_path: target } }, env);
-  assert.equal(edit.status, 0, 'setup: the edit itself should be clean');
-
-  const r = hook('stop-require-measurement.mjs', {}, env);
-  assert.equal(r.status, 2, `expected a block, got ${r.status}:\n${r.stdout}${r.stderr}`);
-  assert.match(r.stderr, /no live gate receipt/);
-  assert.match(r.stderr, /preview\.html/);
+  const { project, env } = editedPage('<!doctype html><title>t</title><p>a</p>');
+  try {
+    const r = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(r.status, 2, `expected a block, got ${r.status}:\n${r.stdout}${r.stderr}`);
+    assert.match(r.stderr, /no live, passing gate receipt/);
+    assert.match(r.stderr, /page\.html/);
+  } finally { rmSync(project, { recursive: true, force: true }); }
 });
 
 test('Stop releases once the file has a live receipt', () => {
@@ -178,6 +187,99 @@ test('a receipt stops counting once the file changes', () => {
   assert.match(after.stdout, /EXPIRED/);
 });
 
+/**
+ * #24. The hook printed a command, the agent ran it from its Bash tool - where
+ * neither CLAUDE_PLUGIN_DATA nor CLAUDE_SESSION_ID exists - and the receipt
+ * landed where the hook never looked. It blocked every turn for the rest of
+ * the session. The only honest test is to run the printed command verbatim.
+ */
+test('the command the Stop hook prints is one that clears it', () => {
+  const { project, page, env } = editedPage('<!doctype html><html lang="en"><title>t</title><main><p>Hello</p></main></html>');
+  try {
+    const blocked = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(blocked.status, 2, `expected a block:\n${blocked.stderr}`);
+    const cmd = blocked.stderr.split('\n').map(l => l.trim()).find(l => /gate\.mjs" verify_states\.mjs/.test(l));
+    assert.ok(cmd, `no runnable command in:\n${blocked.stderr}`);
+
+    // As the agent's Bash tool runs it: from the project, without the hook's env.
+    const bashEnv = { ...process.env };
+    delete bashEnv.CLAUDE_PLUGIN_DATA; delete bashEnv.CLAUDE_SESSION_ID; delete bashEnv.CLAUDE_PROJECT_DIR;
+    const ran = spawnSync('sh', ['-c', cmd], { cwd: project, encoding: 'utf8', env: bashEnv });
+    assert.equal(ran.status, 0, `the printed command failed:\n${ran.stdout}${ran.stderr}`);
+
+    const after = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(after.status, 0, `still blocked after running its own command:\n${after.stderr}`);
+  } finally { rmSync(project, { recursive: true, force: true }); }
+});
+
+test('a receipt written outside the plugin data dir still counts', () => {
+  const { project, page, env } = editedPage('<!doctype html><title>t</title><p>a</p>');
+  try {
+    const bashEnv = { ...process.env };
+    delete bashEnv.CLAUDE_PLUGIN_DATA; delete bashEnv.CLAUDE_SESSION_ID; delete bashEnv.CLAUDE_PROJECT_DIR;
+    const g = spawnSync('node', [join(ROOT, 'scripts/gate.mjs'), 'check_no_emoji.py', page],
+      { cwd: project, encoding: 'utf8', env: bashEnv });
+    assert.equal(g.status, 0, g.stdout + g.stderr);
+    assert.ok(existsSync(join(project, '.ds-receipts')), 'setup: the receipt should be in the project');
+    const r = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(r.status, 0, `a receipt in <project>/.ds-receipts was not found:\n${r.stderr}`);
+  } finally { rmSync(project, { recursive: true, force: true }); }
+});
+
+/** #27. A failing gate is a measurement, not a pass. */
+test('a receipt from a failing gate does not clear the Stop hook', () => {
+  const { project, page, env } = editedPage('<style>.a{color:#ff0000;margin:13px}</style><button class="a">Go</button>');
+  try {
+    const g = spawnSync('node', [join(ROOT, 'scripts/gate.mjs'), 'lint_hardcodes.py', page],
+      { cwd: project, encoding: 'utf8', env: { ...process.env, ...env } });
+    assert.notEqual(g.status, 0, `setup: lint_hardcodes should fail this page:\n${g.stdout}`);
+    const r = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(r.status, 2, 'a failing receipt cleared the hook');
+    assert.match(r.stderr, /measured, failing: lint_hardcodes\.py/);
+  } finally { rmSync(project, { recursive: true, force: true }); }
+});
+
+test('a receipt from a run that printed SKIPPED does not count', () => {
+  const { project, page, env } = editedPage('<!doctype html><title>t</title><p>a</p>');
+  try {
+    const receipts = join(scratch, 'receipts');
+    mkdirSync(receipts, { recursive: true });
+    const sha = spawnSync('node', ['-e',
+      `import('${join(ROOT, 'scripts/gate.mjs')}').then(m => console.log(m.hashFile(process.argv[1])))`, page],
+      { encoding: 'utf8' }).stdout.trim();
+    writeFileSync(join(receipts, 'local.jsonl'), JSON.stringify({
+      at: new Date().toISOString(), gate: 'axe_audit.mjs', args: [page], exit: 0,
+      targets: [{ path: page, sha256: sha }], values: [], skipped: true }) + '\n');
+    const r = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(r.status, 2, 'a SKIPPED run cleared the hook');
+  } finally { rmSync(project, { recursive: true, force: true }); }
+});
+
+/** verify_states on a stylesheet checks zero elements; demanding it is friction, not measurement. */
+test('the Stop hook does not demand a receipt for a stylesheet', () => {
+  const project = mkdtempSync(join(tmpdir(), 'ds-proj-'));
+  try {
+    const css = join(project, 'style.css');
+    writeFileSync(css, ':root{--x:var(--y)}\n');
+    const env = { CLAUDE_PLUGIN_DATA: scratch, CLAUDE_PROJECT_DIR: project, CLAUDE_SESSION_ID: '' };
+    hook('posttooluse-fast-gates.mjs', { session_id: 's1', tool_name: 'Edit', tool_input: { file_path: css } }, env);
+    const r = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(r.status, 0, `blocked over a stylesheet:\n${r.stderr}`);
+  } finally { rmSync(project, { recursive: true, force: true }); }
+});
+
+/** #26. Both hooks share one browser check, and it knows where Linux keeps Chrome. */
+test('browser detection is shared and covers Linux and PATH', () => {
+  const src = readFileSync(join(ROOT, 'hooks/_browser.mjs'), 'utf8');
+  for (const p of ['/opt/google/chrome/chrome', '/usr/bin/google-chrome', '.cache/ms-playwright', 'PATH'])
+    assert.ok(src.includes(p), `_browser.mjs does not look at ${p}`);
+  for (const h of ['session-start-preflight.mjs', 'stop-require-measurement.mjs']) {
+    const s = readFileSync(join(ROOT, 'hooks', h), 'utf8');
+    assert.match(s, /from '\.\/_browser\.mjs'/, `${h} does not use the shared browser check`);
+    assert.doesNotMatch(s, /Google Chrome\.app/, `${h} still carries its own path list`);
+  }
+});
+
 test('both install routes declare all three hooks', () => {
   const plugin = JSON.parse(readFileSync(join(ROOT, 'hooks/hooks.json'), 'utf8'));
   const project = JSON.parse(readFileSync(join(ROOT, '.claude/settings.json'), 'utf8'));
@@ -210,27 +312,17 @@ test('both install routes declare all three hooks', () => {
  */
 test('the edit ledger is scoped to the project, not just the session', () => {
   // Same session id in both, so only the project scoping can keep them apart.
-  const shared = { CLAUDE_PLUGIN_DATA: scratch, CLAUDE_SESSION_ID: '' };
+  const { project: a, env } = editedPage('<!doctype html><title>t</title><p>a</p>');
   const b = mkdtempSync(join(tmpdir(), 'ds-projB-'));
   try {
-    const target = join(ROOT, 'examples/sample-app/preview.html');
-    const edit = hook('posttooluse-fast-gates.mjs',
-      { session_id: 'same', tool_name: 'Edit', tool_input: { file_path: target } },
-      { ...shared, CLAUDE_PROJECT_DIR: ROOT });
-    assert.equal(edit.status, 0, 'setup: the edit itself should be clean');
-
-    const other = hook('stop-require-measurement.mjs', { session_id: 'same' },
-      { ...shared, CLAUDE_PROJECT_DIR: b });
-    assert.equal(other.status, 0,
-      `project B was blocked by project A's edit:\n${other.stderr}`);
-
+    const other = hook('stop-require-measurement.mjs', { session_id: 's1' }, { ...env, CLAUDE_PROJECT_DIR: b });
+    assert.equal(other.status, 0, `project B was blocked by project A's edit:\n${other.stderr}`);
     // Project A itself must still be blocked - the scoping must not switch the hook off.
-    const own = hook('stop-require-measurement.mjs', { session_id: 'same' },
-      { ...shared, CLAUDE_PROJECT_DIR: ROOT });
-    assert.equal(own.status, 2,
-      `project A should still be blocked for its own unmeasured edit, got ${own.status}`);
-    assert.match(own.stderr, /preview\.html/);
+    const own = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(own.status, 2, `project A should still be blocked for its own unmeasured edit, got ${own.status}`);
+    assert.match(own.stderr, /page\.html/);
   } finally {
+    rmSync(a, { recursive: true, force: true });
     rmSync(b, { recursive: true, force: true });
   }
 });
@@ -292,18 +384,14 @@ test('SessionStart removes the shared ledgers older versions left behind', () =>
  * sessions, in other projects, had edited.
  */
 test('the edit ledger is scoped to the session from the hook payload', () => {
-  const env = { CLAUDE_PLUGIN_DATA: scratch, CLAUDE_PROJECT_DIR: ROOT, CLAUDE_SESSION_ID: '' };
-  const target = join(ROOT, 'examples/sample-app/preview.html');
-  const edit = hook('posttooluse-fast-gates.mjs',
-    { session_id: 'sess-a', tool_name: 'Edit', tool_input: { file_path: target } }, env);
-  assert.equal(edit.status, 0, 'setup: the edit itself should be clean');
-
-  const other = hook('stop-require-measurement.mjs', { session_id: 'sess-b' }, env);
-  assert.equal(other.status, 0, `session B was blocked by session A's edit:\n${other.stderr}`);
-
-  const own = hook('stop-require-measurement.mjs', { session_id: 'sess-a' }, env);
-  assert.equal(own.status, 2, `session A should still be blocked, got ${own.status}`);
-  assert.match(own.stderr, /preview\.html/);
+  const { project, env } = editedPage('<!doctype html><title>t</title><p>a</p>');
+  try {
+    const other = hook('stop-require-measurement.mjs', { session_id: 's2' }, env);
+    assert.equal(other.status, 0, `session B was blocked by session A's edit:\n${other.stderr}`);
+    const own = hook('stop-require-measurement.mjs', { session_id: 's1' }, env);
+    assert.equal(own.status, 2, `session A should still be blocked, got ${own.status}`);
+    assert.match(own.stderr, /page\.html/);
+  } finally { rmSync(project, { recursive: true, force: true }); }
 });
 
 /**

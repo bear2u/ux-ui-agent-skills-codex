@@ -9,6 +9,7 @@
  * Usage: node scripts/verify_focustrap.mjs <file.html> --open=<triggerSelector> [--dialog=<sel>] [--dark]
  * Exit 1 if the trap leaks, the dialog lacks semantics, or focus isn't returned.
  */
+import { launchBrowser } from './_browser.mjs';
 import { resolve } from 'node:path';
 import { requireTargets } from './_targets.mjs';
 let chromium;
@@ -33,7 +34,7 @@ const dialogSel = (argv.find(a => a.startsWith('--dialog=')) || '').split('=')[1
 const dark = argv.includes('--dark');
 if (!file || !open) { console.log('usage: node scripts/verify_focustrap.mjs <file.html> --open=<trigger> [--dialog=<sel>] [--dark]'); process.exit(0); }
 
-const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch());
+const browser = await launchBrowser(chromium);
 const page = await browser.newPage({ viewport: { width: 1100, height: 800 } });
 await page.goto('file://' + resolve(file), { waitUntil: 'networkidle' }).catch(() => {});
 if (dark) await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));

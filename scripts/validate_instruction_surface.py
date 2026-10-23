@@ -14,6 +14,9 @@ both:
      skill stops stating an always-on rule, plugin users silently lose it.
   4. The plugin manifests and package.json disagree on the version, so an install
      ships a number the release never had.
+  5. A SKILL.md frontmatter value is a plain YAML scalar containing ": " or " #".
+     A strict YAML loader reads that as a nested mapping or a comment, rejects
+     the file, and the skill is silently skipped.
 
 It also holds the line on size: the whole point of the split is that the always-on
 brief stays short.
@@ -112,6 +115,18 @@ def main():
         for label, pattern in PLUGIN_ALWAYS_ON:
             if not re.search(pattern, doctrine):
                 issues.append(f"plugin: design-doctrine no longer states the {label}")
+
+    # Frontmatter a strict YAML loader accepts. No PyYAML here, so check the one
+    # construct that breaks it: a plain (unquoted) scalar with ": " or " #".
+    for skill in sorted((ROOT / ".claude" / "skills").glob("*/SKILL.md")):
+        parts = skill.read_text(encoding="utf-8").split("---")
+        if len(parts) < 3:
+            continue
+        for line in parts[1].splitlines():
+            m = re.match(r"^([A-Za-z][\w-]*):[ \t]+(\S.*)$", line)
+            if m and m.group(2)[0] not in "\"'|>[{" and (": " in m.group(2) or " #" in m.group(2)):
+                issues.append(f"frontmatter: {skill.relative_to(ROOT)} `{m.group(1)}` is an unquoted "
+                              "value containing ': ' or ' #' - invalid YAML; quote it")
 
     # A version the install ships must be a version the release actually cut.
     versions = {}

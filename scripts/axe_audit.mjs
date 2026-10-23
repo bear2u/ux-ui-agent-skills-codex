@@ -11,6 +11,8 @@
  * Requires Playwright (skips cleanly if absent). axe-core is injected from
  * node_modules if present, else from a pinned CDN build (Chrome has network).
  */
+import { launchBrowser } from './_browser.mjs';
+import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { requireTargets } from './_targets.mjs';
@@ -30,7 +32,7 @@ const dark = argv.includes('--dark');
 const [file] = requireTargets(argv.filter(a => !a.startsWith('--')), { allowDirs: false });
 if (!file) { console.log('usage: node scripts/axe_audit.mjs <file.html> [--dark]'); process.exit(0); }
 
-const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch());
+const browser = await launchBrowser(chromium);
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 await page.goto('file://' + resolve(file), { waitUntil: 'networkidle' }).catch(() => {});
 /* Kill transitions BEFORE flipping the theme. Without this, axe samples colours
@@ -44,13 +46,17 @@ if (dark) {
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 }
 
-const localAxe = resolve('node_modules/axe-core/axe.min.js');
+// The kit's own copy first (a plugin runs with the user's project as cwd), then
+// the cwd's, then the CDN.
+const localAxe = [fileURLToPath(new URL('../node_modules/axe-core/axe.min.js', import.meta.url)),
+                  resolve('node_modules/axe-core/axe.min.js')].find(p => existsSync(p));
 try {
-  if (existsSync(localAxe)) await page.addScriptTag({ path: localAxe });
+  if (localAxe) await page.addScriptTag({ path: localAxe });
   else await page.addScriptTag({ url: 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js' });
 } catch {
-  console.log('axe_audit: could not load axe-core (no local copy + no network) — SKIPPED');
-  await browser.close(); process.exit(0);
+  const required = process.env.DS_REQUIRE_BROWSER === '1';
+  console.log(`axe_audit: could not load axe-core (no local copy + no network) — ${required ? 'REQUIRED, FAILING' : 'SKIPPED'}`);
+  await browser.close(); process.exit(required ? 1 : 0);
 }
 
 const results = await page.evaluate(async () => {

@@ -37,6 +37,7 @@
  * Usage: node scripts/verify_keyboard.mjs <file.html | dir>
  * Exit 1 on any signal.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { requireTargets } from './_targets.mjs';
@@ -180,7 +181,7 @@ const MARK = () => {
   return { controls, composites, orphans, scoped: !!openDialog };
 };
 
-const browser = await chromium.launch({ channel: 'chrome' });
+const browser = await launchBrowser(chromium);
 const problems = [];
 let totalControls = 0, totalComposites = 0;
 

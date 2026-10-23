@@ -10,6 +10,89 @@ with auto-generated notes instead.
 
 ---
 
+### Unreleased
+
+- Codex Cloud: all browser gates, screenshots and test preflight share a browser
+  launcher supporting explicit user executables, system Chrome, and Playwright
+  Chromium in a user cache. Administrator access is no longer required.
+- Required render and axe checks fail when the browser or accessibility engine
+  cannot load, instead of reporting a successful skipped run.
+- Document cloud setup, browser selection and reuse from other Codex projects.
+- Native slider state contrast measures its explicit accent color rather than
+  inherited text color; contrasting and low-contrast fixtures cover both verdicts.
+
+### `v2.10.0`
+
+**Agent observability: did the agent follow the rules?** The hooks now keep a
+local record of what they saw, and a report turns it into one verdict per
+session from three rules that can be counted: every page edited had a passing
+gate before the session ended, no fast-gate finding was left on a file's latest
+version, and the agent never finished while the Stop hook still had pages open.
+
+- `hooks/_events.mjs`: one JSON line per session start, per UI edit (with each
+  fast gate's result) and per end of turn (each page's state, and whether the
+  Stop hook passed, blocked, warned, or let the agent go). Keyed by the session
+  id from the hook payload, like the ledger; no id, no event. Local only, files
+  older than 30 days are deleted at session start, `DS_OBSERVE=0` turns it off,
+  and a write that fails never changes what a hook decides.
+- The Stop hook records the turn Claude Code lets through after a block
+  (`stop_hook_active`). That is the one way an agent can finish with pages
+  unmeasured, and it is now visible instead of silent. The hook still never
+  blocks that turn.
+- `scripts/observe.mjs`, also `npx ux-ui-skills observe` and `/observe`: a
+  summary of recent sessions, `--last` / `--session <id>` for a timeline,
+  `--project`, `--days`, `--json`, and `--html` for a dashboard page built on
+  the kit's theme. The page passes the kit's render gates in light and dark.
+- Ten tests drive the real hooks to produce each verdict, including a session
+  that quit while blocked and one that left a finding open.
+- **Dark-mode focus rings now clear 3:1 on every surface.** The shared example
+  theme drew the ring in `action-primary` (#006a6b): 2.93:1 on the dark page,
+  2.34:1 on a card, 1.63:1 on a raised surface, on every component-states page.
+  It now uses the theme's light teal link colour. The golden theme's dark ring
+  was 2.84:1 on its raised surface and now uses blue.400. No render gate
+  measured the ring itself; `tests/meta/focus-ring.test.mjs` now resolves each
+  shipped theme's ring per theme and measures it against every surface token.
+
+---
+
+### `v2.9.10`
+
+**Use this release, not 2.9.9.** The 2.9.9 package on npm was cut from a
+feature branch by mistake and also carried unfinished work; it is deprecated.
+2.9.10 is the same fix, cut from `main`.
+
+**The Stop hook can be satisfied by the command it prints.** In 2.9.8 it could
+not: the agent's Bash tool has neither `CLAUDE_PLUGIN_DATA` nor
+`CLAUDE_SESSION_ID`, so a receipt it wrote landed in `<project>/.ds-receipts/`
+while the hook read the plugin data dir, and the hook blocked every turn for
+the rest of the session (#24).
+
+- **Receipts are read from every place one can be written**: the plugin data
+  dir, the project, the cwd, and each folder above the edited page. Safe
+  because a receipt only counts while the page still hashes as it did when
+  measured.
+- **Only a passing receipt clears a page.** A failing gate is a measurement,
+  not a pass (#27), and a run that printed `SKIPPED` measured nothing (#25).
+  The hook now says which: `not measured` or `measured, failing`.
+- **Only pages are required.** `verify_states` on a stylesheet checks zero
+  elements, so a `.css`, `.tsx` or `.vue` edit no longer blocks.
+- **The printed command is absolute** and carries `CLAUDE_PLUGIN_DATA`, so it
+  works from any cwd. A test runs it verbatim and checks the hook clears.
+- **`measure_render` and `axe_audit` fail under `DS_REQUIRE_BROWSER=1`** when
+  the browser cannot launch or axe-core cannot load, like the other 16 render
+  gates (#25). `axe-core` 4.10.2 is now a devDependency, so in a clone after
+  `npm install` `axe_audit` no longer needs the network. A plugin install
+  still loads it from the CDN. A new guard stubs a failing launch and checks all
+  17 render gates exit non-zero.
+- **Browser detection sees Linux** (`/opt/google/chrome`, `/usr/bin/google-chrome`,
+  Chromium, anything on `PATH`), shared by both hooks instead of two copies of
+  a macOS path list (#26).
+- **Two SKILL.md files had invalid YAML frontmatter** (`data-dashboard`,
+  `design-screen`): an unquoted `: ` in the description. Quoted, and
+  `validate_instruction_surface.py` now rejects the construct (#23).
+
+---
+
 ### `v2.9.8`
 
 **The Stop hook can no longer block you over another project's files, even if

@@ -1,6 +1,11 @@
 # Codex support
 
-This fork adds Codex skills and lifecycle hooks to [plugin87/ux-ui-agent-skills](https://github.com/plugin87/ux-ui-agent-skills). The upstream kit, attribution and MIT license are retained. Claude hooks remain unchanged.
+Codex Cloud can run the instructions and all browser gates without administrator access.
+See [Codex Cloud setup and reuse across projects](../docs/CODEX-CLOUD.md).
+CLI lifecycle hooks remain optional and require a host with `/hooks` support;
+cloud compatibility does not imply that these hooks are active.
+
+This fork adds Codex skills and lifecycle hooks to [plugin87/ux-ui-agent-skills](https://github.com/plugin87/ux-ui-agent-skills). The upstream kit, attribution and MIT license are retained. Claude hook enforcement is retained; browser detection also recognizes user executables and custom Playwright caches.
 
 ## 설치
 
@@ -26,7 +31,7 @@ python3 codex/install.py
 
 ```bash
 npm ci
-npx playwright install chrome
+npx playwright install chromium
 ```
 
 업데이트: `git pull --ff-only` 후 `python3 codex/install.py`를 다시 실행합니다. 훅 변경 시 `/hooks`의 검토 상태를 확인하세요. 기존의 별도 수동 설치는 자동으로 덮어쓰지 않습니다. 같은 이름의 관리되지 않은 스킬이 있으면 설치를 중단하므로 먼저 백업하고 정리해야 합니다.

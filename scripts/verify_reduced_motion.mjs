@@ -23,6 +23,7 @@
  * Usage: node scripts/verify_reduced_motion.mjs <file.html | dir> [--threshold=0.1]
  * Exit 1 on any signal.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { requireTargets } from './_targets.mjs';
@@ -116,7 +117,7 @@ const SNAPSHOT = ({ THRESHOLD, linkedCss }) => {
   return { hasPolicy, declaresMotion, visible, moving, busy };
 };
 
-const browser = await chromium.launch({ channel: 'chrome' });
+const browser = await launchBrowser(chromium);
 const problems = [];
 
 for (const f of files) {

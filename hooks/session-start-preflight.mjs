@@ -14,8 +14,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { removeLegacyLedgers } from './_ledger.mjs';
+import { browserPresent } from './_browser.mjs';
+import { recordEvent, pruneEvents, kitVersion } from './_events.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+let payload = {};
+try { payload = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { payload = {}; }
 
 function playwrightPresent() {
   for (const p of [join(ROOT, 'node_modules/playwright/package.json'),
@@ -23,15 +28,6 @@ function playwrightPresent() {
     if (existsSync(p)) return true;
   }
   return false;
-}
-
-/** A browser Playwright can actually drive, without launching one. */
-function browserPresent() {
-  const home = process.env.HOME || '';
-  const macChrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-  if (existsSync(macChrome)) return true;
-  const caches = [join(home, 'Library/Caches/ms-playwright'), join(home, '.cache/ms-playwright')];
-  return caches.some(c => existsSync(c));
 }
 
 const pw = playwrightPresent();
@@ -44,7 +40,7 @@ if (pw && br) {
   lines.push('  result is recorded, and quote the output rather than remembering it.');
 } else {
   lines.push(`  Render gates CANNOT run here (playwright: ${pw ? 'yes' : 'no'}, browser: ${br ? 'yes' : 'no'}).`);
-  lines.push('  Fix: npm install && npx playwright install chrome');
+  lines.push('  Fix: npm install && npx playwright install chromium');
   lines.push('  Until then, every contrast, state, axe, target-size, overflow and');
   lines.push('  responsive claim is UNMEASURED. Say so in your answer. A render gate');
   lines.push('  with no browser prints SKIPPED and exits 0 - that is not a pass.');
@@ -55,6 +51,11 @@ lines.push('  validate_theme_refs, validate_tokens, validate_contrast.');
 
 // Pre-2.9.7 ledgers were shared across sessions and projects; clear them.
 removeLegacyLedgers();
+
+pruneEvents();
+recordEvent(payload, 'session_start', {
+  source: payload.source || null, version: kitVersion(), playwright: pw, browser: br,
+});
 
 console.log(lines.join('\n'));
 process.exit(0);

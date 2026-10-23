@@ -1,3 +1,5 @@
+> Codex Cloud: [setup without administrator access and cross-project reuse](CODEX-CLOUD.md). All browser gates support user-installed Chrome/Chromium and Playwright’s user cache.
+
 # Five ways in, and which one is yours
 
 `ux-ui-agent-skills` reaches an agent through five channels. They install
@@ -13,7 +15,7 @@ forward. Re-run the commands and you should get the same ones.
 
 | You use | Install with | You get |
 |---|---|---|
-| **Claude Code** | `/plugin marketplace add plugin87/ux-ui-agent-skills` | 25 skills, hooks, the critic |
+| **Claude Code** | `/plugin marketplace add plugin87/ux-ui-agent-skills` | 26 skills, hooks, the critic |
 | **Codex, Cursor, Copilot, Aider** | `npx ux-ui-agent-skills init --agent codex` | `AGENTS.md` + every gate |
 | **Any MCP client** | `claude mcp add ux-ui-gates -- npx -y --package=ux-ui-agent-skills ux-ui-mcp` | 6 tools that run the gates |
 | **A terminal, any project** | `brew install plugin87/tap/ux-ui-agent-skills` | the CLI and the MCP binary |
@@ -31,7 +33,7 @@ forward. Re-run the commands and you should get the same ones.
 This is the only route that carries the parts Claude Code can **enforce** rather
 than request:
 
-- **25 skills** that load on demand. Ask for a screen and `design-screen` loads
+- **26 skills** that load on demand. Ask for a screen and `design-screen` loads
   itself; ask about contrast and `a11y-audit` does.
 - **Three hooks** that fire whether or not the model remembers them: no
   hardcoded values and no emoji on every file write, and a refusal to end a
@@ -191,7 +193,7 @@ node scripts/verify_screen_economy.mjs <your page>
 **The render gates need a browser, once per machine:**
 
 ```bash
-npm install && npx playwright install chrome
+npm install && npx playwright install chromium
 ```
 
 Without it a render gate prints `SKIPPED` and exits 0. That is not a pass — it

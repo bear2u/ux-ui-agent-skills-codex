@@ -1,3 +1,5 @@
+> **Codex Cloud compatible:** Browser gates support user-installed Chrome/Chromium and Playwright’s user cache without administrator access. See [Cloud setup and reuse across projects](docs/CODEX-CLOUD.md).
+
 > **Codex fork:** This repository adds portable Codex installation, 25 namespaced skills, and lifecycle hooks for automatic UI checks and verification receipts. See [Codex setup / 설치 안내](codex/README.md). Original kit: [plugin87/ux-ui-agent-skills](https://github.com/plugin87/ux-ui-agent-skills).
 
 <div align="center">
@@ -15,7 +17,7 @@ A comprehensive kit of structured instructions, design tokens, runnable skills, 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/brand/xias-cover-dark.png">
   <source media="(prefers-color-scheme: light)" srcset=".github/brand/xias-cover-light.png">
-  <img src=".github/images/hero.png" alt="XIAS - design-system doctrine for coding agents. 52 objective gates, 34 of which open a real browser: WCAG contrast in every state, axe roles and landmarks, keyboard, target size, reduced motion, no horizontal overflow at 280, token by intent, screen economy. 138 design systems, 52 component specs, 25 runnable skills, 14 DTCG token files, 16 framework adapters. Claude Code, Codex, Cursor, Copilot, Aider, MCP." width="900">
+  <img src=".github/images/hero.png" alt="XIAS - design-system doctrine for coding agents. 52 objective gates, 34 of which open a real browser: WCAG contrast in every state, axe roles and landmarks, keyboard, target size, reduced motion, no horizontal overflow at 280, token by intent, screen economy. 138 design systems, 52 component specs, 26 runnable skills, 14 DTCG token files, 16 framework adapters. Claude Code, Codex, Cursor, Copilot, Aider, MCP." width="900">
 </picture>
 
 <br>
@@ -26,7 +28,7 @@ A comprehensive kit of structured instructions, design tokens, runnable skills, 
 <br>
 <br>
 
-[![Version](https://img.shields.io/badge/version-2.9.8-6366f1?style=for-the-badge)](https://github.com/plugin87/ux-ui-agent-skills/releases)
+[![Version](https://img.shields.io/badge/version-2.10.0-6366f1?style=for-the-badge)](https://github.com/plugin87/ux-ui-agent-skills/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](#license)
 [![WCAG 2.2 AA→AAA](https://img.shields.io/badge/WCAG-2.2_AA→AAA-a855f7?style=for-the-badge)](#-accessibility-standards)
 
@@ -35,7 +37,7 @@ A comprehensive kit of structured instructions, design tokens, runnable skills, 
 [![npm](https://img.shields.io/npm/v/ux-ui-agent-skills?style=flat-square&logo=npm&logoColor=white&color=cb3837)](https://www.npmjs.com/package/ux-ui-agent-skills)
 [![npm downloads](https://img.shields.io/npm/dt/ux-ui-agent-skills?style=flat-square&logo=npm&logoColor=white&color=cb3837)](https://www.npmjs.com/package/ux-ui-agent-skills)
 ![Tokens](https://img.shields.io/badge/Design_Tokens-DTCG-fbbf24?style=flat-square)
-![Skills](https://img.shields.io/badge/runnable_skills-25-14b8a6?style=flat-square)
+![Skills](https://img.shields.io/badge/runnable_skills-26-14b8a6?style=flat-square)
 ![Gates](https://img.shields.io/badge/objective_gates-52-16a34a?style=flat-square)
 [![Live demo](https://img.shields.io/badge/live_demo-open-0ea5e9?style=flat-square)](https://plugin87.github.io/ux-ui-agent-skills/)
 ![Design Systems](https://img.shields.io/badge/design_systems-138-f97316?style=flat-square)
@@ -48,7 +50,7 @@ A comprehensive kit of structured instructions, design tokens, runnable skills, 
 
 </div>
 
-**Current release [`v2.9.8`](https://github.com/plugin87/ux-ui-agent-skills/releases)** · [Changelog](CHANGELOG.md) · No build tools, dependencies, or runtime — a pure instruction and knowledge layer for AI agents.
+**Current release [`v2.10.0`](https://github.com/plugin87/ux-ui-agent-skills/releases)** · [Changelog](CHANGELOG.md) · No build tools, dependencies, or runtime — a pure instruction and knowledge layer for AI agents.
 
 ---
 
@@ -225,7 +227,7 @@ project you open — no files copied into your repo:
 /plugin install ux-ui-agent-skills@ux-ui-agent-skills
 ```
 
-You get 25 skills and the `design-critic` agent.
+You get 26 skills and the `design-critic` agent.
 
 **Fourteen the model reaches for on its own** when the work calls for them:
 `design-tokens`, `design-component`, `design-code`, `design-review`,
@@ -236,10 +238,10 @@ screen / app", which until 2026-10-05 no skill did, so the most common request
 there is matched nothing strongly and the kit got used at a fraction of its
 depth.
 
-**Eleven you start yourself**, because each one takes an action or sets a
+**Twelve you start yourself**, because each one takes an action or sets a
 direction that should be your call: `/brandkit`, `/governance`, `/image-to-code`,
 `/migrate-design-system`, `/prototype`, `/redesign`, `/gate`, `/critique`,
-`/grill-me`, `/ship`, `/scaffold-project`. They carry
+`/grill-me`, `/ship`, `/scaffold-project`, `/observe`. They carry
 `disable-model-invocation: true`, which is the field that actually stops the
 model invoking them — until 2026-10-05 six of them said `invocation: user`, a
 key Claude Code does not read, so they were auto-invocable the whole time. The
@@ -258,6 +260,7 @@ Code's own `plugin validate` says so.
 "/grill-me"      interrogate the brief before anything is built
 "/gate"          run all 52 checks and report the real N/N
 "/critique"      hand the result to a critic that argues for rejection
+"/observe"       did the agent follow the rules? sessions, blocks, findings left open
 ```
 
 If the skills do not show up straight away, start a new session. To check what
@@ -363,8 +366,8 @@ pulled in by `/plugin install` or `npx ux-ui-agent-skills init`, so run this onc
 in the kit directory before expecting a full score:
 
 ```bash
-npm install                          # playwright
-npx playwright install chrome        # real Chrome: six gates require the channel
+npm ci                               # locked development dependencies
+npx playwright install chromium       # user cache; no administrator access
 ```
 
 Without it those 34 report `REQUIRED, FAILING` under `accuracy_report.mjs`, which
@@ -412,6 +415,7 @@ That is correctness. It is not quality, and the kit says so out loud:
 |---|---|---|
 | Is it correct? | Measured, all or nothing | `node scripts/accuracy_report.mjs` -> a real `N/N` |
 | Is it any good? | Judged, never scored | `/critique` — an adversarial `design-critic` that renders the work, argues for rejection, and cites evidence per finding |
+| Did the agent follow the rules? | Counted per session, from the hooks | `/observe` or `npx ux-ui-skills observe` -> pages edited and measured, Stop hook blocks, findings left open, sessions that quit while blocked |
 | Does the kit transfer to a cold start? | Measured, one brief at a time | `evals/` — cold-start briefs, then `node evals/run.mjs <brief-id>` points 15 objective gates at what the agent produced |
 
 `/critique` exists because a passing gate is never evidence of taste. It refuses to
@@ -433,6 +437,17 @@ catching them takes judgement. `node evals/score_critic.mjs` scores a critique
 against the key, prints the matching excerpt for every hit and the rule for every
 miss, and says in its own output that the number is a floor until you have read
 them.
+
+`/observe` answers a different question: not whether the work is right, but
+whether the agent did what the rules say while making it. The hooks record one
+event per session start, per UI edit (with what each fast gate caught) and per
+end of turn (which pages had a passing gate, and whether the Stop hook passed,
+blocked, or let the agent go with pages still open). The report joins those to
+the gate receipts and gives each session a verdict from three counted rules:
+every edited page measured, no finding left on a file's latest version, never
+finished while blocked. `--last` and `--session <id>` print a timeline;
+`--html` writes the same thing as a page. Everything stays on the machine,
+files older than 30 days are deleted, and `DS_OBSERVE=0` turns it off.
 
 Runs are recorded in `evals/RESULTS.md` with their provenance attached — who built the output and whether they could see the kit while doing it — because a run without that context is not evidence of anything.
 
@@ -475,7 +490,7 @@ What transfers, and what does not, stated exactly:
 | Tokens, components, taste, accessibility, 138 design systems | yes | **yes** |
 | All 52 gates | yes | **yes** - they are plain Node and Python |
 | Doctrine: the eight states, token by intent, mobile-first, the house rules | yes | **yes** |
-| 25 skills that load on demand | yes | no, the doctrine is inlined instead |
+| 26 skills that load on demand | yes | no, the doctrine is inlined instead |
 | Hooks that fire whether or not the model remembers | yes | **no** |
 | `/critique` in a separate context | yes | no, it is a step in the instructions |
 

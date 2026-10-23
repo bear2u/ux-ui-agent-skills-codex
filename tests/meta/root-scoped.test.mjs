@@ -44,6 +44,25 @@ test('validate_instruction_surface refuses a copy whose brief dropped the emoji 
   }
 });
 
+test('validate_instruction_surface refuses SKILL.md frontmatter a YAML loader rejects', () => {
+  // An unquoted ": " inside a value is a nested mapping to a strict loader, and
+  // the skill is skipped without a word (#23).
+  const dir = mkdtempSync(join(tmpdir(), 'ds-root-'));
+  try {
+    for (const p of ['CLAUDE.md', '.claude', '.claude-plugin', 'package.json']) {
+      cpSync(join(ROOT, p), join(dir, p), { recursive: true });
+    }
+    const skill = join(dir, '.claude/skills/data-dashboard/SKILL.md');
+    writeFileSync(skill, readFileSync(skill, 'utf8')
+      .replace(/^description: '(.*)'$/m, (_, v) => `description: ${v.replace(/''/g, "'")}`));
+    const r = py('validate_instruction_surface.py', ['--root', dir]);
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /frontmatter: .*data-dashboard/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('all three still pass against the real repo', () => {
   for (const s of ['validate_component_spec.py', 'validate_instruction_surface.py', 'validate_template.py']) {
     const r = py(s, []);

@@ -27,7 +27,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, appendFileSync, readFileSync, existsSync, readdirSync, realpathSync } from 'node:fs';
-import { join, resolve, relative, extname } from 'node:path';
+import { join, resolve, relative, extname, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -107,12 +107,59 @@ export function writeReceipt({ gate, args = [], exit, files = [], values = {}, a
   }
 }
 
+/**
+ * Every place a receipt can have been written. The writer cannot always know
+ * which one the reader will look in: the agent's Bash tool has neither
+ * CLAUDE_PLUGIN_DATA nor CLAUDE_SESSION_ID, so its receipts land in
+ * `<cwd>/.ds-receipts/local.jsonl`, while a hook reads the plugin data dir. The
+ * Stop hook could then never be satisfied by the command it printed (#24).
+ * Reading all of them is safe because a receipt only counts for a file whose
+ * hash still matches - a receipt from another session or folder is evidence
+ * about exactly the same bytes.
+ */
+export function receiptDirs(file) {
+  const dirs = [receiptsDir()];
+  if (process.env.CLAUDE_PLUGIN_DATA) dirs.push(join(process.env.CLAUDE_PLUGIN_DATA, 'receipts'));
+  if (process.env.CLAUDE_PROJECT_DIR) dirs.push(join(process.env.CLAUDE_PROJECT_DIR, '.ds-receipts'));
+  dirs.push(join(process.cwd(), '.ds-receipts'));
+  // The folders above the file: the agent usually runs the gate from the
+  // project root or somewhere between it and the file.
+  if (file) {
+    let d = dirname(resolve(file));
+    for (;;) {
+      dirs.push(join(d, '.ds-receipts'));
+      const up = dirname(d);
+      if (up === d) break;
+      d = up;
+    }
+  }
+  return [...new Set(dirs.map(d => resolve(d)))];
+}
+
+function readJsonl(f) {
+  try {
+    return readFileSync(f, 'utf8').split('\n').filter(Boolean).map(l => {
+      try { return JSON.parse(l); } catch { return null; }
+    }).filter(r => r && Array.isArray(r.targets));
+  } catch { return []; }
+}
+
+/** This session's receipts, as written by this process's own settings. */
 export function readReceipts() {
-  const f = receiptsFile();
-  if (!existsSync(f)) return [];
-  return readFileSync(f, 'utf8').split('\n').filter(Boolean).map(l => {
-    try { return JSON.parse(l); } catch { return null; }
-  }).filter(Boolean);
+  return readJsonl(receiptsFile());
+}
+
+/** Receipts from every location a receipt for `file` could be in. Edit ledgers are skipped. */
+function allReceipts(file) {
+  const out = [];
+  for (const dir of receiptDirs(file)) {
+    let names = [];
+    try { names = readdirSync(dir); } catch { continue; }
+    for (const n of names) {
+      if (n.endsWith('.jsonl') && !n.startsWith('edited-')) out.push(...readJsonl(join(dir, n)));
+    }
+  }
+  return out;
 }
 
 /** A receipt is live when the file still hashes as it did when measured. */
@@ -120,8 +167,17 @@ export function liveReceiptsFor(file) {
   const now = hashFile(file);
   if (!now) return [];
   const abs = resolve(file);
-  return readReceipts().filter(r =>
+  return allReceipts(file).filter(r =>
     r.targets.some(t => resolve(t.path) === abs && t.sha256 === now));
+}
+
+/**
+ * A live receipt from a gate that passed and actually measured something. A
+ * failing gate is a measurement, but not one that clears the file (#27), and a
+ * run that printed SKIPPED measured nothing (#25).
+ */
+export function passingReceiptsFor(file) {
+  return liveReceiptsFor(file).filter(r => r.exit === 0 && !r.skipped);
 }
 
 function main(argv) {
@@ -153,6 +209,12 @@ function main(argv) {
       return 2;
     }
     const live = liveReceiptsFor(file);
+    const passing = live.filter(r => r.exit === 0 && !r.skipped);
+    if (live.length && !passing.length) {
+      console.log(`FAILING: ${file} was measured, and no live measurement passed:`);
+      for (const r of live) console.log(`  ${r.at}  ${r.gate}  exit ${r.exit}${r.skipped ? ' (SKIPPED)' : ''}`);
+      return 1;
+    }
     if (!live.length) {
       const any = readReceipts().some(r => r.targets.some(t => resolve(t.path) === resolve(file)));
       console.log(any
@@ -203,6 +265,8 @@ function main(argv) {
     exit: r.status,
     targets: snapshot,
     values: measuredValues(out),
+    // A gate that printed SKIPPED measured nothing, whatever its exit code.
+    skipped: /\bSKIPPED\b/.test(out),
     browser_required: true,
   };
 

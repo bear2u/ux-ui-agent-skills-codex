@@ -111,7 +111,7 @@ for (const f of fixtures()) {
     for (const [script, args] of BROWSER_GATES) {
       const r = gate(script, [...args, `${DIR}/${f}`]);
       if (/SKIPPED/.test(r.out)) {
-        throw new Error(`${script} SKIPPED - no browser. Run: npm install && npx playwright install chrome`);
+        throw new Error(`${script} SKIPPED - no browser. Run: npm install && npx playwright install chromium`);
       }
       if (r.status !== 0) rejected.push(`${script} ${args.join(' ')} -> exit ${r.status}\n${r.out.trim().split('\n').slice(-6).join('\n')}`);
     }

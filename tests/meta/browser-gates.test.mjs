@@ -31,6 +31,14 @@ test('verify_states rejects a button that only fails on hover', () => {
   if (!/below WCAG AA/.test(r.out)) throw new Error(`wrong reason:\n${r.out}`);
 });
 
+test('verify_states measures a native slider accent instead of its inherited text color', () => {
+  accepts(gate('verify_states.mjs', [F('good/range-accent.html')]));
+});
+
+test('verify_states rejects a low-contrast slider accent even with dark inherited text', () => {
+  rejects(gate('verify_states.mjs', [F('bad/range-accent.html')]), /need 3/);
+});
+
 test('axe_audit rejects a control with no accessible name', () => {
   rejects(gate('axe_audit.mjs', [F('bad/unlabelled.html')]), /violation/i);
 });

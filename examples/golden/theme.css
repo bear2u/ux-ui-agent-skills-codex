@@ -70,6 +70,9 @@
 }
 
 :root[data-theme="dark"] {
+  /* blue.600 is 2.84:1 on the dark raised surface, under the 3:1 a focus
+     indicator needs; blue.400 clears every dark surface. */
+  --shadow-focus-ring: 0 0 0 2px #030712, 0 0 0 4px #60a5fa;
   --color-surface-page: #030712;
   --color-surface-card: #111827;
   --color-surface-raised: #1f2937;

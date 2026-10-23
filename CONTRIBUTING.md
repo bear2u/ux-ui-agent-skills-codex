@@ -53,17 +53,19 @@ anyway - a disputed gate is a conversation, a skipped gate is not.
 ## Setup
 
 ```bash
-git clone https://github.com/plugin87/ux-ui-agent-skills.git
-cd ux-ui-agent-skills
-npm install                 # playwright — needed by 35 of the 51 gates, not dev-only
-npx playwright install chrome
+git clone https://github.com/PlayerDuvidoso/ux-ui-agent-skills-codex.git
+cd ux-ui-agent-skills-codex
+npm ci                      # locked development and browser-test dependencies
+npx playwright install chromium
 npm test                    # browser-free gates
 npm run test:unit           # unit + CLI + registry consistency
 ```
 
-You need Node 20+, Python 3, and real Chrome. Six gates launch
-`channel: 'chrome'` on purpose: headless Chromium and Chrome do not always agree
-on font metrics, and font metrics are where narrow layouts break.
+You need Node 20+, Python 3, and Chrome or Playwright Chromium. All browser gates
+share the same selection: `DS_BROWSER_EXECUTABLE_PATH` when set, otherwise system
+Chrome followed by Playwright Chromium. Browser versions can differ in font
+metrics, so record the browser used when investigating layout differences.
+See [Codex Cloud setup](docs/CODEX-CLOUD.md) for installation without administrator access.
 
 Optional but useful: copy `.mcp.example.json` to `.mcp.json` if you want the
 Figma MCP connection while working on the kit. It is deliberately not shipped.

@@ -13,6 +13,7 @@
  * installed the script SKIPS (exit 0) so it never blocks users who don't have it.
  * Exit 1 only when a real rendered text pair is below WCAG 2.2 AA.
  */
+import { launchBrowser } from './_browser.mjs';
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { requireTargets } from './_targets.mjs';
@@ -46,8 +47,12 @@ function L([r, g, b]) { return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(
 function ratio(a, b) { const l1 = L(a), l2 = L(b), hi = Math.max(l1, l2), lo = Math.min(l1, l2); return (hi + 0.05) / (lo + 0.05); }
 
 let browser;
-try { browser = await chromium.launch({ channel: 'chrome' }); }
-catch { try { browser = await chromium.launch(); } catch (e) { console.log('measure_render: no browser available — SKIPPED'); process.exit(0); } }
+try { browser = await launchBrowser(chromium); }
+catch (error) {
+  const required = process.env.DS_REQUIRE_BROWSER === '1';
+  console.log(`measure_render: ${error.message} — ${required ? 'REQUIRED, FAILING' : 'SKIPPED'}`);
+  process.exit(required ? 1 : 0);
+}
 
 let totalFail = 0;
 for (const f of files) {

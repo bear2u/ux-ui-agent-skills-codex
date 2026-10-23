@@ -13,9 +13,10 @@
  */
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, appendFileSync, existsSync, readFileSync } from 'node:fs';
-import { join, dirname, extname, resolve } from 'node:path';
+import { join, dirname, extname, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ledgerDir, ledgerFile } from './_ledger.mjs';
+import { recordEvent } from './_events.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const UI_EXT = new Set(['.html', '.htm', '.css', '.scss', '.tsx', '.jsx', '.vue', '.svelte']);
@@ -70,12 +71,17 @@ const GATES = [
  * failing a clean file. */
 
 const findings = [];
+const results = [];
 for (const [cmd, args] of GATES) {
   const r = spawnSync(cmd, args, { encoding: 'utf8', timeout: 20000 });
-  if (r.status === 1) {
-    findings.push((r.stdout || '').trim().split('\n').filter(l => /^\s*x |FAIL/.test(l)).slice(0, 6).join('\n'));
-  }
+  const lines = r.status === 1
+    ? (r.stdout || '').trim().split('\n').filter(l => /^\s*x |FAIL/.test(l)).slice(0, 6)
+    : [];
+  if (r.status === 1) findings.push(lines.join('\n'));
+  results.push({ gate: basename(args[0]), exit: r.status, findings: lines });
 }
+
+recordEvent(payload, 'edit', { path: resolve(file), tool: payload.tool_name || null, gates: results });
 
 if (findings.length) {
   console.error(`[ux-ui-agent-skills] ${file} has findings a gate caught on write:\n`

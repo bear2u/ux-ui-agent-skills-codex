@@ -25,6 +25,7 @@
  *   node scripts/verify_mobile_first.mjs <file> --width 320
  * Exit 0 = the base layout is the mobile layout; 1 = it is not; 2 = bad input.
  */
+import { launchBrowser } from './_browser.mjs';
 import { chromium } from 'playwright';
 import { readFileSync, statSync, readdirSync, existsSync } from 'node:fs';
 import { join, extname, relative, resolve } from 'node:path';
@@ -96,11 +97,11 @@ if (!files.length) {
 
 let browser;
 try {
-  browser = await chromium.launch({ channel: 'chrome' });
+  browser = await launchBrowser(chromium);
 } catch (err) {
   if (REQUIRE_BROWSER) {
     console.log(`REQUIRED, FAILING: no browser available (${err.message.split('\n')[0]}).`);
-    console.log('Fix: npm install && npx playwright install chrome');
+    console.log('Fix: npm install && npx playwright install chromium');
     process.exit(1);
   }
   console.log('SKIPPED: no browser available. This measured NOTHING - not a pass.');

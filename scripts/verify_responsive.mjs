@@ -16,6 +16,7 @@
  *                                           [--scale=1.25] [--advisory]
  * Exit 1 if any file overflows at any tested width (0 with --advisory).
  */
+import { launchBrowser } from './_browser.mjs';
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { requireTargets } from './_targets.mjs';
@@ -42,7 +43,7 @@ const files = statSync(abs).isDirectory()
   ? readdirSync(abs).filter(f => f.endsWith('.html')).map(f => join(abs, f)).sort()
   : [abs];
 
-const browser = await chromium.launch({ channel: 'chrome' });
+const browser = await launchBrowser(chromium);
 const fails = [];
 for (const w of widths) {
   const page = await browser.newPage({ viewport: { width: w, height: 800 } });
